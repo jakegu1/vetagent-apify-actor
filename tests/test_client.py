@@ -19,7 +19,10 @@ USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
 OTHER = "0x4200000000000000000000000000000000000006"
 STRANGER_ID = "someoneElse123456"
 
-# Shortened from the real answer shown on https://vetagent.dev/api, plus the evidence shape.
+# Shortened from the real answer on https://vetagent.dev/api. The best_pair keys are the ones
+# `_liquidity_signals` in the engine's src/risk.py writes; a first version of this fixture
+# invented baseToken/quoteToken there, and the Actor's symbol column came back null in its
+# first real run while every test passed.
 ANSWER = {
     "address": USDC_BASE,
     "risk_level": "low",
@@ -27,9 +30,10 @@ ANSWER = {
     "confidence": "high",
     "driver": None,
     "signals": [{"severity": "ok", "name": "Liquidity is adequate", "category": "liquidity"}],
-    "evidence": {"best_pair": {"chain": "base",
-                               "baseToken": {"address": USDC_BASE, "symbol": "USDC"},
-                               "quoteToken": {"address": OTHER, "symbol": "WETH"}}},
+    "evidence": {"best_pair": {"dex": "aerodrome", "chain": "base", "liquidity_usd": 1000000,
+                               "price_usd": 1.0, "sellers_24h": 10, "volume_24h_usd": 50000,
+                               "pair_created_at": 1700000000000, "buys_24h": 20,
+                               "sells_24h": 20}},
     "recommendation": "Low risk: sellable and liquid when checked, no fatal signal.",
     "checked_at": "2026-09-15T05:17:23Z",
     "evidence_max_age_seconds": 0,
@@ -71,13 +75,17 @@ class Rows(unittest.TestCase):
     def test_answer_maps_to_a_row(self):
         row = client.to_item(USDC_BASE, "base", 200, ANSWER, None)
         self.assertEqual(set(row), set(client.FIELDS))
-        self.assertEqual((row["riskLevel"], row["chain"], row["symbol"], row["verdictSource"]),
-                         ("low", "base", "USDC", "vetagent"))
+        self.assertEqual((row["riskLevel"], row["chain"], row["dex"], row["liquidityUsd"],
+                          row["verdictSource"]),
+                         ("low", "base", "aerodrome", 1000000, "vetagent"))
         self.assertIsNone(row["error"])
 
-    def test_symbol_only_when_the_pair_names_this_address(self):
-        row = client.to_item(OTHER.replace("6", "7"), "base", 200, ANSWER, None)
-        self.assertIsNone(row["symbol"])
+    def test_answer_without_a_pool_still_maps(self):
+        answer = dict(ANSWER, risk_level="unknown", evidence={"data_gaps": []},
+                      unknown_kind="coverage", next_action="abstain")
+        row = client.to_item(OTHER, "auto", 200, answer, None)
+        self.assertEqual((row["riskLevel"], row["chain"], row["dex"], row["nextAction"]),
+                         ("unknown", None, None, "abstain"))
 
     def test_no_verdict_is_never_low(self):
         cases = [(429, {"error": "rate_limited"}, "VetAgent answered HTTP 429", "retry"),

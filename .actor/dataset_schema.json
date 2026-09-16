@@ -28,9 +28,15 @@
                 "title": "Chain",
                 "description": "The chain the answer covers."
             },
-            "symbol": {
+            "dex": {
                 "type": ["string", "null"],
-                "title": "Symbol"
+                "title": "DEX",
+                "description": "The exchange of the pool the answer is about."
+            },
+            "liquidityUsd": {
+                "type": ["number", "null"],
+                "title": "Liquidity (USD)",
+                "description": "Liquidity of that pool in US dollars, as VetAgent counted it."
             },
             "confidence": {
                 "type": ["string", "null"],
@@ -72,11 +78,14 @@
         "overview": {
             "title": "Overview",
             "transformation": {
-                "fields": ["token", "chain", "symbol", "riskLevel", "driver", "recommendation", "nextAction", "checkedAt", "verdictSource", "error"]
+                "fields": ["token", "chain", "dex", "liquidityUsd", "riskLevel", "driver", "recommendation", "nextAction", "checkedAt", "verdictSource", "error"]
             },
             "display": {
                 "component": "table",
                 "properties": {
+                    "liquidityUsd": {
+                        "format": "number"
+                    },
                     "checkedAt": {
                         "format": "date"
                     }

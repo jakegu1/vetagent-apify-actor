@@ -39,10 +39,10 @@ TIMEOUT_SECONDS = 60
 _EVM = re.compile(r"^0x[0-9a-fA-F]{40}$")
 _SOLANA = re.compile(r"^[1-9A-HJ-NP-Za-km-z]{32,44}$")
 
-FIELDS = ("token", "chainHint", "chain", "symbol", "riskLevel", "riskScore", "confidence",
-          "driver", "driverCategory", "recommendation", "unknownKind", "nextAction",
-          "checkedAt", "evidenceMaxAgeSeconds", "signals", "evidence", "verdictSource",
-          "httpStatus", "error")
+FIELDS = ("token", "chainHint", "chain", "dex", "liquidityUsd", "riskLevel", "riskScore",
+          "confidence", "driver", "driverCategory", "recommendation", "unknownKind",
+          "nextAction", "checkedAt", "evidenceMaxAgeSeconds", "signals", "evidence",
+          "verdictSource", "httpStatus", "error")
 
 
 def _key(token):
@@ -146,15 +146,6 @@ def post_assess(token, chain, verbose, client, opener=urllib.request.urlopen, sl
     return status, payload, error
 
 
-def _symbol(token, best_pair):
-    """The queried token's symbol, only when the pair names that exact address on one side."""
-    for side in ("baseToken", "quoteToken"):
-        entry = best_pair.get(side)
-        if isinstance(entry, dict) and _key(str(entry.get("address") or "")) == _key(token):
-            return entry.get("symbol")
-    return None
-
-
 def _blank(token, chain, status=None):
     item = dict.fromkeys(FIELDS)
     item.update(token=token, chainHint=chain, signals=[], evidence={}, httpStatus=status)
@@ -184,7 +175,10 @@ def to_item(token, chain, status, payload, error):
         driver = payload.get("driver") if isinstance(payload.get("driver"), dict) else {}
         signals = payload.get("signals") if isinstance(payload.get("signals"), list) else []
         item = _blank(token, chain, status)
-        item.update(chain=best_pair.get("chain"), symbol=_symbol(token, best_pair),
+        # VetAgent's slim evidence names the pool, not the token: best_pair carries dex,
+        # chain, liquidity_usd, price_usd and trade counts, and no symbol.
+        item.update(chain=best_pair.get("chain"), dex=best_pair.get("dex"),
+                    liquidityUsd=best_pair.get("liquidity_usd"),
                     riskLevel=payload["risk_level"], riskScore=payload.get("risk_score"),
                     confidence=payload.get("confidence"), driver=driver.get("name"),
                     driverCategory=driver.get("category"),

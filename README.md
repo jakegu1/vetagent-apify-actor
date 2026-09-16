@@ -60,7 +60,6 @@ One dataset row per token. A shortened real answer for USDC on Base:
 {
     "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
     "chain": "base",
-    "symbol": "USDC",
     "riskLevel": "low",
     "riskScore": 0,
     "confidence": "high",
