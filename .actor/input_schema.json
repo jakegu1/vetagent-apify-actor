@@ -1,0 +1,34 @@
+{
+    "$schema": "https://apify.com/schemas/v1/input.ide.json",
+    "title": "Tokens to check",
+    "type": "object",
+    "schemaVersion": 1,
+    "properties": {
+        "tokens": {
+            "title": "Token addresses",
+            "type": "array",
+            "description": "Contract addresses to check, one per line: an EVM address (0x followed by 40 hex characters) or a Solana mint address. Up to 100 per run; any beyond that are skipped and the log says how many.",
+            "editor": "stringList",
+            "prefill": ["0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"],
+            "items": {
+                "type": "string"
+            }
+        },
+        "chainHint": {
+            "title": "Chain",
+            "type": "string",
+            "description": "Which chain the addresses are on. The same address can exist on several chains; with Auto, each answer covers the chain holding the most liquidity and names it in the chain field.",
+            "editor": "select",
+            "default": "auto",
+            "enum": ["auto", "ethereum", "bsc", "base", "arbitrum", "polygon", "optimism", "avalanche", "solana"],
+            "enumTitles": ["Auto", "Ethereum", "BNB Smart Chain", "Base", "Arbitrum", "Polygon", "Optimism", "Avalanche", "Solana"]
+        },
+        "verboseEvidence": {
+            "title": "Include raw evidence",
+            "type": "boolean",
+            "description": "Also return raw upstream fields such as reserves and the pair address. Off by default: the slim evidence already carries what is needed to read the verdict.",
+            "default": false
+        }
+    },
+    "required": ["tokens"]
+}

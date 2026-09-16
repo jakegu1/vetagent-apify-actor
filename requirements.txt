@@ -1,0 +1,2 @@
+# HTTP calls use the standard library, so the Apify SDK is the only dependency.
+apify >= 4.0.0, < 5.0.0

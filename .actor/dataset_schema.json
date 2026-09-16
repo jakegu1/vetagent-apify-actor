@@ -1,0 +1,105 @@
+{
+    "$schema": "https://apify.com/schemas/v1/dataset.ide.json",
+    "actorSpecification": 1,
+    "fields": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+            "token": {
+                "type": "string",
+                "title": "Token address",
+                "description": "The address as given in the input."
+            },
+            "riskLevel": {
+                "type": "string",
+                "title": "Risk level",
+                "description": "low: no fatal signal in the checks that ran; the exit was open when checked. medium: real signals, none fatal. high: do not proceed without review. unknown: a critical check could not run, never a green light."
+            },
+            "driver": {
+                "type": ["string", "null"],
+                "title": "Driver",
+                "description": "The one signal that decided the verdict; null when nothing above ok fired."
+            },
+            "recommendation": {
+                "type": ["string", "null"],
+                "title": "Recommendation"
+            },
+            "chain": {
+                "type": ["string", "null"],
+                "title": "Chain",
+                "description": "The chain the answer covers."
+            },
+            "symbol": {
+                "type": ["string", "null"],
+                "title": "Symbol"
+            },
+            "confidence": {
+                "type": ["string", "null"],
+                "title": "Confidence",
+                "description": "How complete the input data was, not how safe the token is."
+            },
+            "signals": {
+                "type": "array",
+                "title": "Signals",
+                "description": "Every signal that fired, with its severity and category."
+            },
+            "evidence": {
+                "type": "object",
+                "title": "Evidence",
+                "description": "What the verdict rests on, including data_gaps when a check could not run."
+            },
+            "nextAction": {
+                "type": ["string", "null"],
+                "title": "Next action",
+                "description": "Only on unknown. retry: a data source or the call failed. abstain: nothing can see the token. fix_input: the address or chain is not valid."
+            },
+            "checkedAt": {
+                "type": ["string", "null"],
+                "title": "Checked at"
+            },
+            "verdictSource": {
+                "type": "string",
+                "title": "Verdict source",
+                "description": "vetagent when VetAgent answered; actor when this Actor could not get an answer, in which case riskLevel is unknown and error says why."
+            },
+            "error": {
+                "type": ["string", "null"],
+                "title": "Error"
+            }
+        },
+        "required": ["token", "riskLevel", "verdictSource"]
+    },
+    "views": {
+        "overview": {
+            "title": "Overview",
+            "transformation": {
+                "fields": ["token", "chain", "symbol", "riskLevel", "driver", "recommendation", "nextAction", "checkedAt", "verdictSource", "error"]
+            },
+            "display": {
+                "component": "table",
+                "properties": {
+                    "checkedAt": {
+                        "format": "date"
+                    }
+                }
+            }
+        },
+        "signals": {
+            "title": "Signals",
+            "transformation": {
+                "fields": ["token", "chain", "riskLevel", "confidence", "signals", "evidence"]
+            },
+            "display": {
+                "component": "table",
+                "properties": {
+                    "signals": {
+                        "format": "array"
+                    },
+                    "evidence": {
+                        "format": "object"
+                    }
+                }
+            }
+        }
+    }
+}
