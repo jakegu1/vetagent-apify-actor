@@ -30,8 +30,8 @@
             },
             "dex": {
                 "type": ["string", "null"],
-                "title": "DEX",
-                "description": "The exchange of the pool the answer is about."
+                "title": "DEX or source",
+                "description": "The DEX of the pool the answer is about, as VetAgent's source names it; geckoterminal when VetAgent read the pool through its GeckoTerminal fallback, which does not name the DEX."
             },
             "liquidityUsd": {
                 "type": ["number", "null"],

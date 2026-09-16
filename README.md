@@ -54,27 +54,34 @@ reason in `error`. A failure can never be read as low risk.
 
 ## Output
 
-One dataset row per token. A shortened real answer for USDC on Base:
+One dataset row per token. A real row for USDC on Base from this Actor's own test run on
+2026-09-16, with two of its four signals and the `evidence` object left out:
 
 ```json
 {
     "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
     "chain": "base",
+    "dex": "geckoterminal",
+    "liquidityUsd": 124555000,
     "riskLevel": "low",
-    "riskScore": 0,
     "confidence": "high",
     "driver": null,
-    "recommendation": "Low risk: sellable and liquid when checked, no fatal signal. ...",
+    "recommendation": "Low risk: sellable and liquid when checked, no fatal signal. The exit was open when we looked; that is not the same as it cannot be closed. **Owner powers unchecked**: bytecode unreadable (rpc 429). A gap on our side, not a clean result.",
     "nextAction": null,
-    "checkedAt": "2026-09-15T05:17:23Z",
+    "checkedAt": "2026-09-16T10:53:21Z",
     "signals": [
-        {"severity": "ok", "name": "Liquidity is adequate", "category": "liquidity"},
-        {"severity": "ok", "name": "Buys and sells normally", "category": "honeypot"}
+        {"severity": "ok", "name": "Liquidity is adequate", "message": "Main pair holds $124,554,916.", "category": "liquidity"},
+        {"severity": "ok", "name": "Established pair", "message": "Main pair has existed for 1033 days.", "category": "freshness"}
     ],
     "verdictSource": "vetagent",
     "error": null
 }
 ```
+
+Note what that recommendation does: one check (owner powers in the bytecode) could not run
+on the day, and the answer says so instead of passing over it. `dex` names the DEX when
+VetAgent's primary source does, and says `geckoterminal` when the pool was read through its
+fallback source.
 
 ## How accurate is it?
 
