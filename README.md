@@ -13,14 +13,14 @@ Zapier or a webhook through Apify's integrations.
 | Check | Chains |
 |---|---|
 | Buy/sell simulation (honeypot), buy/sell/transfer tax | Ethereum, BSC, Base |
-| Mint and freeze authority, top-10 holder concentration | Solana |
+| Mint and freeze authority; top-10 holder concentration only when RugCheck provides a holder list | Solana |
 | Liquidity depth, counted only for reserves held in independently priced assets | Ethereum, BSC, Base, Arbitrum, Optimism, Polygon, Avalanche, Solana |
 | Pair age, 24h turnover across the token's pools | Every chain |
 | Same-ticker impersonation within one chain | Every chain |
 | Owner powers in the bytecode (blacklist, tax change, pause, mint): disclosed, never scored | Ethereum, BSC, Base |
 
-On a chain the sell simulator does not cover, the answer says so and comes back `unknown`
-rather than pretending the check ran.
+An unavailable critical sell check is disclosed and cannot justify a `low` verdict.
+It generally yields `unknown`; independent fatal evidence can still yield `high`.
 
 ## How to read the verdict
 
@@ -36,52 +36,107 @@ If this Actor cannot get an answer at all (an invalid address, or a call that st
 after retries), the row still comes back `unknown`, with `verdictSource` set to `actor` and the
 reason in `error`. A failure can never be read as low risk.
 
-## Input
+## Review one token from your pool alert
+
+Run the Actor with one token address and its chain. Replace the public USDC address below
+with the token from your alert and set `chainHint` to its chain. Do not enter a wallet address.
+The prefilled USDC example is a demonstration, not a check of your own alert.
 
 ```json
 {
-    "tokens": ["0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"],
-    "chainHint": "base",
-    "verboseEvidence": false
-}
-```
-
-- `tokens`: EVM (`0x...`) or Solana mint addresses, up to 100 per run.
-- `chainHint`: `auto`, `ethereum`, `bsc`, `base`, `arbitrum`, `polygon`, `optimism`,
-  `avalanche` or `solana`. The same address can exist on several chains; with `auto`, each
-  answer covers the chain holding the most liquidity and names it.
-- `verboseEvidence`: also return raw upstream fields such as reserves.
-
-## Output
-
-One dataset row per token. A real row for USDC on Base from this Actor's own test run on
-2026-09-16, with two of its four signals and the `evidence` object left out:
-
-```json
-{
-    "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-    "chain": "base",
-    "dex": "geckoterminal",
-    "liquidityUsd": 124555000,
-    "riskLevel": "low",
-    "confidence": "high",
-    "driver": null,
-    "recommendation": "Low risk: sellable and liquid when checked, no fatal signal. The exit was open when we looked; that is not the same as it cannot be closed. **Owner powers unchecked**: bytecode unreadable (rpc 429). A gap on our side, not a clean result.",
-    "nextAction": null,
-    "checkedAt": "2026-09-16T10:53:21Z",
-    "signals": [
-        {"severity": "ok", "name": "Liquidity is adequate", "message": "Main pair holds $124,554,916.", "category": "liquidity"},
-        {"severity": "ok", "name": "Established pair", "message": "Main pair has existed for 1033 days.", "category": "freshness"}
+    "tokens": [
+        "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
     ],
-    "verdictSource": "vetagent",
-    "error": null
+    "chainHint": "base",
+    "verboseEvidence": true
 }
 ```
 
-Note what that recommendation does: one check (owner powers in the bytecode) could not run
-on the day, and the answer says so instead of passing over it. `dex` names the DEX when
-VetAgent's primary source does, and says `geckoterminal` when the pool was read through its
-fallback source.
+- `tokens`: EVM (`0x...`) contract addresses or Solana mint addresses, up to 100 per run.
+- `chainHint`: `auto`, `ethereum`, `bsc`, `base`, `arbitrum`, `polygon`, `optimism`,
+  `avalanche` or `solana`. Specify the chain from your alert. With `auto`, the engine
+  selects the chain from the available market evidence; inspect the returned chain rather
+  than assuming it is the chain you intended or always the globally deepest market.
+- `verboseEvidence`: set this to `true` for reported pool identifiers when available and
+  `evidence.pool_link_details` used below. Some identifiers can be missing or truncated;
+  do not treat a partial identifier as an exact pool match. The default slim evidence still exposes
+  `evidence.pool_link`, but omits the full pool-comparison details.
+
+## Read the evidence before forwarding the alert
+
+Each token produces one dataset row. Actor fields such as `riskLevel` use camel case;
+the nested `evidence` object keeps the API's snake-case field names.
+
+1. Compare the returned `chain` with your alert's chain.
+2. Read `evidence.pool_link`. `same` means the adopted sell-simulation response reports the
+   displayed market pool on the same chain. `different` means those pools differ.
+   `unknown` means their relationship could not be established; inspect the details.
+   This field is a relationship status, not a URL or a second risk rating.
+3. With verbose evidence, compare `pool_link_details.market_pool` (the displayed market
+   pool) and `reported_pool` (the pool reported by the adopted simulation response), along
+   with their chain fields. The Actor takes a token and chain, not the alert's pool ID:
+   compare these addresses with your alert yourself. Even `same` does not prove your
+   intended pool or intended sale amount was tested.
+4. Read `evidence.data_gaps` for each missing check and its reason. It may be absent when
+   no critical gap was reported. Also read `signals` and `recommendation` for other
+   limitations. If `riskLevel` is `unknown`, route the alert to human review;
+   `nextAction: retry` indicates a temporary failure, while `abstain` indicates a gap that
+   an immediate retry will not close. `pool_link: unknown` alone does not necessarily make
+   the overall `riskLevel` unknown.
+
+### A same-pool observation
+
+This small excerpt is from a tagged HTTP release check for Ethereum WETH on
+2026-11-17 at 02:33 UTC, not a new Apify run or a live quote. Only the two observed fields
+are shown here, using the Actor's `riskLevel` spelling:
+
+```json
+{
+    "riskLevel": "low",
+    "evidence": {
+        "pool_link": "same"
+    }
+}
+```
+
+The simulation and market pool matched in that observation. It does not establish that a
+later run, a different pool, or your intended sale amount will have the same result.
+
+### A result to send for human review
+
+This excerpt was mapped through the unchanged Actor adapter from a Base USDC response
+replayed on 2026-11-19 using saved upstream responses. It is an archive replay, not a fresh
+market check or an Apify run. Full responses contain more fields than these excerpts.
+
+```json
+{
+    "chain": "base",
+    "riskLevel": "low",
+    "evidence": {
+        "pool_link": "different",
+        "pool_link_details": {
+            "market_chain": "base",
+            "market_pool": "0x6cDcb1C4A4D1C3C6d054b27AC5B77e89eAFb971d",
+            "reported_chain": "base",
+            "reported_pool": "0x6c561b446416e1a00e8e93e221854d6ea4171372"
+        }
+    }
+}
+```
+
+The overall verdict was `low`, but the adopted simulation response reported a different
+pool from the displayed market pool. Do not read its sell result as evidence for that
+displayed pool. The pool addresses can be compared independently on
+[BaseScan](https://basescan.org/).
+
+If a new run instead returns `riskLevel: unknown`, read its actual `evidence.data_gaps`;
+do not copy a historical reason into your workflow. The
+[unknown-result guide](https://vetagent.dev/unknown) explains coverage gaps and temporary
+source failures. Solana has authority and liquidity checks here, not a sell simulation.
+
+If you try your own alert, an issue on this repository can simply say whether it ran,
+which evidence field affected your decision, and whether you used it again on another day.
+Please do not post wallet addresses, token inputs, private alerts, or transaction records.
 
 ## How accurate is it?
 
